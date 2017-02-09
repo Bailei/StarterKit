@@ -258,3 +258,9 @@ The test above will create a DOM in memory and look for an h1 tag that says: "He
 * add the file .travis.yml
 * add the repo to your travis account.
 * push your repo to github, travis will automatically check the build
+
+##SETTING UP APPVEYOR CI: (for Windows)
+
+* add the file appveyor.yml
+* add the repo to your appveyor account.
+* push your repo to github, appveyor will automatically check the build
