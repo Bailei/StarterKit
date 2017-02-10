@@ -318,11 +318,11 @@ Because it is easier, but if we want to send a polyfill to only the browsers tha
 * go to polyfill.io 
 * and copy this tag on the top of your page:
 
-<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+```<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>```
 
 To place in your html pages, this will poly full all features, to poly fill only the fetch feature:
 
-<script src="https://cdn.polyfill.io/v2/polyfill.js?feature=fetch"></script>
+```<script src="https://cdn.polyfill.io/v2/polyfill.js?feature=fetch"></script>```
 
 
 ##CREATING MOCK CALLS:
