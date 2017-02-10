@@ -264,3 +264,156 @@ The test above will create a DOM in memory and look for an h1 tag that says: "He
 * add the file appveyor.yml
 * add the repo to your appveyor account.
 * push your repo to github, appveyor will automatically check the build
+
+##CENTRALIZING API CALLS AND SETTING UP OUR API TO USE FETCH:
+
+All apis should be centralized, and created from the api folder
+
+* For simplicity we will serve the api using the same express instance that is serving our app during development, we do this by adding this code to srcServer.js to add a new route:
+
+//mocking a real api or database (simple option, later we will use a mock api)
+app.get('/users', function(req, res) {
+  res.json([
+    {"id": 1, "fisrtName": "Bob", "lastName": "Smith", "email": "bob@gmail.com"},
+    {"id": 2, "fisrtName": "Tammy", "lastName": "Norton", "email": "tnorton@gmail.com"},
+    {"id": 3, "fisrtName": "Tina", "lastName": "Lee", "email": "lee.tina@gmail.com"}
+  ]);
+});
+
+This is a simple end point that returns user data.
+
+* Now we will use fetch to get the same user data, first we will create a folder called api, then inside the folder 
+we will create a file called userApi.js with the following code:
+
+import 'whatwg-fetch';
+
+export function getUsers() {
+  return get('users');
+}
+
+
+function get(url) {
+  return fetch(url).then(onSuccess, onError);
+}
+
+//here we can place preloaders if we have any calls in progress.
+function onSuccess(response) {
+  return response.json();
+}
+
+function onError(error) {
+  console.log(error); // eslint-disable-line no-console
+}
+
+here we are only exporting one function, the getusers() function, all the other functions are private.
+
+fetch along with promise resolution (onSuccess() function) and error handling (onError()) are abstracted away behind the get function, adding other get, put , delete, post 
+requests will be easy as we only need to provide the url
+
+
+##WHY WE ARE SENDING FETCH POLYFILL TO ALL BROWSERS EVEN THOUGH SOME BROWSERS ALREADY SUPPORT IT:
+
+Because it is easier, but if we want to send a polyfill to only the browsers that need it we can do so by:
+
+* go to polyfill.io 
+* and copy this tag on the top of your page:
+
+<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+
+To place in your html pages, this will poly full all features, to poly fill only the fetch feature:
+
+<script src="https://cdn.polyfill.io/v2/polyfill.js?feature=fetch"></script>
+
+
+##CREATING MOCK CALLS:
+
+Why we use a mock api:
+
+- Unit TESTING
+- In case our production api is unavailable, too expensive to call, slow or we can't use it for TESTING
+- If we need to work off line 
+
+Creating the mock api:
+
+* create the file mockDataSchema.js with this info:
+
+export const schema = {
+  "type": "object",
+  "properties": {
+    "users": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "unique": true,
+            "minimum": 1
+          },
+          "firstName": {
+            "type": "string",
+            "faker": "name.firstName"
+          },
+          "lastName": {
+            "type": "string",
+            "faker": "name.lastName",
+          },
+          "email": {
+            "type": "string",
+            "faker": "internet.email",
+          }
+        },
+        required: ['id', 'firstName', 'lastName', 'email']
+      }
+    }
+  },
+  required: ['users']
+};
+
+This json describes the shape of our mock data, on the top of the file we fisrt declare that this data structure is of type "Object", and this object has a set of properties, the
+first property is users, and the user property has a type of array, then we specify that the array has between 3 to 5 items, and then we define the shape of the items that sit
+inside the users's array, these items are objectes, each object has 4 properties, id, first name, last name and email, then each property's data type and faker data type, 
+for the id property we defined it as being unique and has a minimum value of 1, we don't want 0 or negative numbers, finally we set the properties as 
+required and the users array as required to insure they are displayed.
+
+* now that we defined the schema, we can now have faker generate the data for us by creating the file generateMockData.js with the following code:
+
+import jsf from 'json-schema-faker';
+import {schema} from './mockDataSchema';
+import fs from 'fs';
+import chalk from 'chalk';
+
+const json = JSON.stringify(jsf(schema));
+
+fs.writeFile("./src/api/db.json", json, function (err) {
+  if (err) {
+    return console.log(chalk.red(err));
+  } else {
+    console.log(chalk.green("Mock data generated."));
+  }
+});
+
+This file will generate the data and write is to a file called db.json.
+
+* then we will create an npm script that makes this easy to call, by adding the script:
+
+"generate-mock-data": "babel-node buildScripts/generateMockData",
+
+* Now we can start json server and tell it to use our mock data, the json server will create a mock api with an end point (url) for each top level object it finds, 
+we can start the server using the following npm script:
+
+"start-mockapi": "json-server --watch src/api/db.json --port 3001",
+
+Notice we are running the json server on a separate port than the one we are using for our server.
+
+* then we will create an npm script that will make sure we get a different set of data everytime we generate mock data:
+
+"prestart-mockapi": "npm run generate-mock-data",
+
+* now we need to update the application to use these mock apis instead of the hard coded express api call we wrote earlier, so we will assume that the 
+express api call is the real production data and the mock api is the one we will use during production. so we will need to tell the application to point to
+ the correct api for each environement, to do that we will create a file called baseUrl.js in the api folder and add this code:
+
+ 
